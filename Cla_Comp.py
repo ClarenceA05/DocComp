@@ -15,6 +15,19 @@ from fuzzywuzzy import fuzz
 import difflib  # For Differ comparison
 import time  # To simulate timing and estimate processing duration
 
+# Simple password-based authentication
+def check_password():
+    password = st.text_input("Enter the password", type="Cloud@Compare11#a")
+    if password == "my_secure_password":
+        return True
+    else:
+        st.warning("Please enter a valid password")
+        return False
+
+if check_password():
+    st.title("Clarence & Partners Document Preprocessing App")
+    # Add your app logic here.
+
 # Load the provided logo
 logo_path = "Logo_For white or light backgrounds.png"
 logo_image = Image.open(logo_path)
