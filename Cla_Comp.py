@@ -235,7 +235,7 @@ if check_password():
 
                     # Initialize a progress bar
                     progress = st.progress(0)
-                    progress.update(10)
+                    progress.progress(10)
 
                     with st.spinner('Preprocessing and analyzing documents...'):
                         # Simulate a processing time (to be removed in real cases)
@@ -244,7 +244,7 @@ if check_password():
                         sentences1, processed_sentences1 = preprocess_sentences(doc1)
                         sentences2, processed_sentences2 = preprocess_sentences(doc2)
 
-                        progress.update(40)  # Progress update after preprocessing
+                        progress.progress(40)  # Progress update after preprocessing
 
                     if comparison_method == "Cosine + Fuzzy Matching":
                         # Use the combined similarity function
@@ -253,7 +253,7 @@ if check_password():
                         )
                         st.success('Documents have been compared and aligned.')
 
-                        progress.update(80)  # Progress update before displaying results
+                        progress.progress(80)  # Progress update before displaying results
 
                         # Display the aligned sentences
                         st.subheader("Aligned Sentences")
@@ -277,7 +277,7 @@ if check_password():
                         aligned_sentences = compare_sentences_difflib(sentences1, sentences2)
                         st.success('Documents have been compared using difflib Differ.')
 
-                        progress.update(80)  # Progress update before displaying results
+                        progress.progress(80)  # Progress update before displaying results
 
                         # Display the diff output
                         st.subheader("Differences in Sentences")
@@ -303,7 +303,7 @@ if check_password():
                         mime='text/plain'
                     )
 
-                    progress.update(100)  # Progress completed
+                    progress.progress(100)  # Progress completed
 
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
