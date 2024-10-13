@@ -17,8 +17,8 @@ import time  # To simulate timing and estimate processing duration
 
 # Simple password-based authentication
 def check_password():
-    password = st.text_input("Enter the password", type="Cloud@Compare11#a")
-    if password == "my_secure_password":
+    password = st.text_input("Enter the password", type="password")
+    if password == "Cloud@Compare11#a":  # Replace with your secure password
         return True
     else:
         st.warning("Please enter a valid password")
@@ -26,7 +26,6 @@ def check_password():
 
 if check_password():
     st.title("Clarence & Partners Document Preprocessing App")
-    # Add your app logic here.
 
 # Load the provided logo
 logo_path = "Logo_For white or light backgrounds.png"
