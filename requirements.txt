@@ -7,3 +7,4 @@ pdfplumber==0.11.4
 Pillow==10.4.0
 scikit_learn==1.5.2
 streamlit==1.39.0
+python-docx
