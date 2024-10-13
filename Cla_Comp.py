@@ -21,192 +21,191 @@ def check_password():
     if password == "Cloud@Compare11#a":  # Replace with your secure password
         return True
     else:
-        st.warning("Please enter a valid password")
+        if password:  # Show warning only if something is entered
+            st.warning("Please enter a valid password")
         return False
 
+# Password gate for the app
 if check_password():
+    # Load the provided logo
+    logo_path = "Logo_For white or light backgrounds.png"
+    logo_image = Image.open(logo_path)
+
+    # Set custom styling using colors from the logo
+    primary_color = "#1B75BC"
+    secondary_color = "#8AC640"
+    st.markdown(f"""
+        <style>
+        .reportview-container {{
+            background: linear-gradient(90deg, {secondary_color} 30%, white 30%, white 70%, {secondary_color} 70%);
+        }}
+        .sidebar .sidebar-content {{
+            background: {primary_color};
+        }}
+        h1, h2, h3, h4, h5, h6 {{
+            color: {primary_color};
+        }}
+        </style>
+        """, unsafe_allow_html=True)
+
+    # Display the logo and title
+    st.image(logo_image, width=300)
     st.title("Clarence & Partners Document Preprocessing App")
 
-# Load the provided logo
-logo_path = "Logo_For white or light backgrounds.png"
-logo_image = Image.open(logo_path)
+    # Add introductory text and disclaimer
+    st.markdown("""
+    ### This app is used to preprocess documents (using Python functions) in advance of seeking outputs from the ChatGPT Custom GPT from Clarence & Partners.
 
-# Set custom styling using colors from the logo
-primary_color = "#1B75BC"
-secondary_color = "#8AC640"
-st.markdown(f"""
-    <style>
-    .reportview-container {{
-        background: linear-gradient(90deg, {secondary_color} 30%, white 30%, white 70%, {secondary_color} 70%);
-    }}
-    .sidebar .sidebar-content {{
-        background: {primary_color};
-    }}
-    h1, h2, h3, h4, h5, h6 {{
-        color: {primary_color};
-    }}
-    </style>
-    """, unsafe_allow_html=True)
+    **Disclaimer**: No output provided by this tool should be treated as legal advice and users are encouraged to seek advice of specialist legal counsel.
+    """)
 
-# Display the logo and title
-st.image(logo_image, width=300)
-st.title("Clarence & Partners Document Preprocessing App")
+    # Use caching to download NLTK data once
+    @st.cache_resource
+    def download_nltk_data():
+        """Download necessary NLTK data."""
+        nltk.download('punkt')
+        nltk.download('stopwords')
+        nltk.download('wordnet')
 
-# Add introductory text and disclaimer
-st.markdown("""
-### This app is used to preprocess documents (using Python functions) in advance of seeking outputs from the ChatGPT Custom GPT from Clarence & Partners.
+    # Call the function to download NLTK data
+    download_nltk_data()
 
-**Disclaimer**: No output provided by this tool should be treated as legal advice and users are encouraged to seek advice of specialist legal counsel.
-""")
+    # Function to read DOCX files
+    def read_docx(file):
+        doc = docx.Document(file)
+        return "\n".join([para.text for para in doc.paragraphs])
 
-# Use caching to download NLTK data once
-@st.cache_resource
-def download_nltk_data():
-    """Download necessary NLTK data."""
-    nltk.download('punkt')
-    nltk.download('stopwords')
-    nltk.download('wordnet')
+    # Function to read PDF files
+    def read_pdf(file):
+        text = ""
+        with pdfplumber.open(file) as pdf:
+            for page in pdf.pages:
+                text += page.extract_text() or ""
+        return text
 
-# Call the function to download NLTK data
-download_nltk_data()
+    # Enhanced text extraction function with encoding fallback handling
+    def read_file(uploaded_file):
+        if uploaded_file.name.endswith('.txt'):
+            # Read .txt file with multiple encoding fallback
+            encodings = ['utf-8', 'ISO-8859-1', 'Windows-1252']
+            for enc in encodings:
+                try:
+                    content = uploaded_file.read().decode(enc, errors='replace')
+                    return content
+                except UnicodeDecodeError:
+                    continue
+            st.error(f"Error: Unable to decode the file using standard encodings. Please check the file format.")
+            return None
+        elif uploaded_file.name.endswith('.docx'):
+            # Read .docx file
+            content = read_docx(uploaded_file)
+        elif uploaded_file.name.endswith('.pdf'):
+            # Read .pdf file
+            content = read_pdf(uploaded_file)
+        else:
+            st.error('Unsupported file type. Please upload a .txt, .docx, or .pdf file.')
+            return None
+        return content
 
-# Function to read DOCX files
-def read_docx(file):
-    doc = docx.Document(file)
-    return "\n".join([para.text for para in doc.paragraphs])
+    # Function to normalize and preprocess text
+    def normalize_text(text):
+        text = text.lower()
+        text = re.sub(r'\s+', ' ', text)
+        text = text.strip()
+        return text
 
-# Function to read PDF files
-def read_pdf(file):
-    text = ""
-    with pdfplumber.open(file) as pdf:
-        for page in pdf.pages:
-            text += page.extract_text() or ""
-    return text
+    # Function to preprocess and tokenize text into sentences and words
+    @st.cache_data
+    def preprocess_sentences(text):
+        sentences = sent_tokenize(text)
+        stop_words = set(stopwords.words('english'))
+        lemmatizer = WordNetLemmatizer()
 
-# Enhanced text extraction function with encoding fallback handling
-def read_file(uploaded_file):
-    if uploaded_file.name.endswith('.txt'):
-        # Read .txt file with multiple encoding fallback
-        encodings = ['utf-8', 'ISO-8859-1', 'Windows-1252']
-        for enc in encodings:
-            try:
-                content = uploaded_file.read().decode(enc, errors='replace')
-                return content
-            except UnicodeDecodeError:
-                continue
-        st.error(f"Error: Unable to decode the file using standard encodings. Please check the file format.")
-        return None
-    elif uploaded_file.name.endswith('.docx'):
-        # Read .docx file
-        content = read_docx(uploaded_file)
-    elif uploaded_file.name.endswith('.pdf'):
-        # Read .pdf file
-        content = read_pdf(uploaded_file)
-    else:
-        st.error('Unsupported file type. Please upload a .txt, .docx, or .pdf file.')
-        return None
-    return content
+        processed = []
+        for sentence in sentences:
+            tokens = word_tokenize(sentence)
+            tokens = [lemmatizer.lemmatize(word) for word in tokens if word.isalpha() and word.lower() not in stop_words]
+            processed_sentence = ' '.join(tokens)
+            processed.append(processed_sentence)
+        return sentences, processed
 
-# Function to normalize and preprocess text
-def normalize_text(text):
-    text = text.lower()
-    text = re.sub(r'\s+', ' ', text)
-    text = text.strip()
-    return text
-
-# Function to preprocess and tokenize text into sentences and words
-@st.cache_data
-def preprocess_sentences(text):
-    sentences = sent_tokenize(text)
-    stop_words = set(stopwords.words('english'))
-    lemmatizer = WordNetLemmatizer()
-
-    processed = []
-    for sentence in sentences:
-        tokens = word_tokenize(sentence)
-        tokens = [lemmatizer.lemmatize(word) for word in tokens if word.isalpha() and word.lower() not in stop_words]
-        processed_sentence = ' '.join(tokens)
-        processed.append(processed_sentence)
-    return sentences, processed
-
-# Function to align sentences between documents using combined cosine similarity and fuzzy matching
-def align_sentences_combined(sentences1, sentences2, threshold=0.75, cosine_weight=0.5, fuzzy_weight=0.5):
-    # Vectorizer for cosine similarity
-    vectorizer = lambda s: np.array([1 if w in s else 0 for w in set(" ".join(sentences1 + sentences2).split())])
-    sentence_vectors1 = np.array([vectorizer(sentence) for sentence in sentences1])
-    sentence_vectors2 = np.array([vectorizer(sentence) for sentence in sentences2])
-    
-    # Compute cosine similarity matrix
-    similarity_matrix = cosine_similarity(sentence_vectors1, sentence_vectors2)
-
-    aligned_pairs = []
-    for idx1, sentence1 in enumerate(sentences1):
-        best_combined_score = 0
-        best_match_sentence = None
-        best_cosine_score = 0
-        best_fuzzy_score = 0
+    # Function to align sentences between documents using combined cosine similarity and fuzzy matching
+    def align_sentences_combined(sentences1, sentences2, threshold=0.75, cosine_weight=0.5, fuzzy_weight=0.5):
+        # Vectorizer for cosine similarity
+        vectorizer = lambda s: np.array([1 if w in s else 0 for w in set(" ".join(sentences1 + sentences2).split())])
+        sentence_vectors1 = np.array([vectorizer(sentence) for sentence in sentences1])
+        sentence_vectors2 = np.array([vectorizer(sentence) for sentence in sentences2])
         
-        for idx2, sentence2 in enumerate(sentences2):
-            # Calculate cosine similarity
-            cosine_score = similarity_matrix[idx1][idx2]
+        # Compute cosine similarity matrix
+        similarity_matrix = cosine_similarity(sentence_vectors1, sentence_vectors2)
+
+        aligned_pairs = []
+        for idx1, sentence1 in enumerate(sentences1):
+            best_combined_score = 0
+            best_match_sentence = None
+            best_cosine_score = 0
+            best_fuzzy_score = 0
             
-            # Calculate fuzzy similarity (convert to a percentage scale)
-            fuzzy_score = fuzz.ratio(sentence1, sentence2) / 100.0
-            
-            # Calculate the combined similarity score
-            combined_score = (cosine_weight * cosine_score) + (fuzzy_weight * fuzzy_score)
-            
-            # Check if the current score is the best
-            if combined_score > best_combined_score:
-                best_combined_score = combined_score
-                best_match_sentence = sentence2
-                best_cosine_score = cosine_score
-                best_fuzzy_score = fuzzy_score
+            for idx2, sentence2 in enumerate(sentences2):
+                # Calculate cosine similarity
+                cosine_score = similarity_matrix[idx1][idx2]
+                
+                # Calculate fuzzy similarity (convert to a percentage scale)
+                fuzzy_score = fuzz.ratio(sentence1, sentence2) / 100.0
+                
+                # Calculate the combined similarity score
+                combined_score = (cosine_weight * cosine_score) + (fuzzy_weight * fuzzy_score)
+                
+                # Check if the current score is the best
+                if combined_score > best_combined_score:
+                    best_combined_score = combined_score
+                    best_match_sentence = sentence2
+                    best_cosine_score = cosine_score
+                    best_fuzzy_score = fuzzy_score
 
-        # Check if the best combined score meets the threshold
-        if best_combined_score >= threshold:
-            aligned_pairs.append({
-                'doc1_sentence': sentence1,
-                'doc2_sentence': best_match_sentence,
-                'combined_similarity_score': best_combined_score,
-                'cosine_similarity_score': best_cosine_score,
-                'fuzzy_similarity_score': best_fuzzy_score
-            })
-        else:
-            aligned_pairs.append({
-                'doc1_sentence': sentence1,
-                'doc2_sentence': None,
-                'combined_similarity_score': best_combined_score,
-                'cosine_similarity_score': best_cosine_score,
-                'fuzzy_similarity_score': best_fuzzy_score
-            })
-    return aligned_pairs
+            # Check if the best combined score meets the threshold
+            if best_combined_score >= threshold:
+                aligned_pairs.append({
+                    'doc1_sentence': sentence1,
+                    'doc2_sentence': best_match_sentence,
+                    'combined_similarity_score': best_combined_score,
+                    'cosine_similarity_score': best_cosine_score,
+                    'fuzzy_similarity_score': best_fuzzy_score
+                })
+            else:
+                aligned_pairs.append({
+                    'doc1_sentence': sentence1,
+                    'doc2_sentence': None,
+                    'combined_similarity_score': best_combined_score,
+                    'cosine_similarity_score': best_cosine_score,
+                    'fuzzy_similarity_score': best_fuzzy_score
+                })
+        return aligned_pairs
 
-# Function to compare sentences using difflib's Differ
-def compare_sentences_difflib(sentences1, sentences2):
-    aligned_pairs = []
-    differ = difflib.Differ()
+    # Function to compare sentences using difflib's Differ
+    def compare_sentences_difflib(sentences1, sentences2):
+        aligned_pairs = []
+        differ = difflib.Differ()
 
-    for idx1, sentence1 in enumerate(sentences1):
-        if idx1 < len(sentences2):
-            sentence2 = sentences2[idx1]
-            diff = list(differ.compare(sentence1.split(), sentence2.split()))
-            aligned_pairs.append({
-                'doc1_sentence': sentence1,
-                'doc2_sentence': sentence2,
-                'diff': ' '.join(diff)
-            })
-        else:
-            aligned_pairs.append({
-                'doc1_sentence': sentence1,
-                'doc2_sentence': None,
-                'diff': "No matching sentence found."
-            })
+        for idx1, sentence1 in enumerate(sentences1):
+            if idx1 < len(sentences2):
+                sentence2 = sentences2[idx1]
+                diff = list(differ.compare(sentence1.split(), sentence2.split()))
+                aligned_pairs.append({
+                    'doc1_sentence': sentence1,
+                    'doc2_sentence': sentence2,
+                    'diff': ' '.join(diff)
+                })
+            else:
+                aligned_pairs.append({
+                    'doc1_sentence': sentence1,
+                    'doc2_sentence': None,
+                    'diff': "No matching sentence found."
+                })
 
-    return aligned_pairs
+        return aligned_pairs
 
-# Main Streamlit app function
-def main():
+    # Main Streamlit app function
     st.title("Advanced Document Comparison and Analysis Tool")
 
     st.write("This application allows you to compare two documents (TXT, DOCX, or PDF) and provides detailed sentence alignment and similarity analysis.")
@@ -310,6 +309,5 @@ def main():
                 st.error(f"An error occurred: {str(e)}")
         else:
             st.error("Please upload both documents.")
-
-if __name__ == "__main__":
-    main()
+else:
+    st.stop()  # Stops the script if the password is incorrect
